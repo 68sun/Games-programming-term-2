@@ -1,6 +1,10 @@
 import pygame,sys, random, time
 from pygame.locals import *
 
+pygame.mixer.pre_init(44100, - 16, 2, 2048)
+
+
+
 pygame.init()
 pygame.display.set_caption("My first PyGame Program")
 screen = pygame.display.set_mode((1280, 720))
@@ -9,13 +13,23 @@ pygame.font.init()
 
 spaceship = pygame.image.load("spaceship.png").convert_alpha()
 
-alien = pygame.image.load("alien.png").convert_alpha()
+alien = pygame.image.load("spaceInv.jpeg")
+
+alien.set_colorkey((255,255,255))
 
 background = pygame.image.load("background.png").convert_alpha()
 
 if pygame.font.get_init():
     print("yeet")
     print(pygame.font.get_fonts())
+
+
+font = pygame.font.SysFont ("arial", 20)
+
+
+pygame.mixer.music.load('shoot.wav')
+
+pygame.mixer.music.load('pacman_beginning.wav')
 
 
 
@@ -29,6 +43,8 @@ class Ship:
     def draw (self):
         screen.blit (spaceship, (self.x, self.y))
 
+    def hit(self, alien):
+        return pygame.Rect(self.x, self.y, 50, 50).colliderect(alien.x, alien.y, 40, 30)
 
 
 class Alien:
@@ -36,9 +52,16 @@ class Alien:
     def __init__ (self):
         self.x = random.randint(0, 1130)
         self.y = random.randint(0, 300)
+        self.dy = 0.05
+        self.rotate =  (math.pi/2)*random.random() + 3*math.pi/4)
+        self.rotateX = math.sin(self.d)*12
+        self.rotateY = math.cos(self.d)*12
 
     def draw (self):
         screen.blit (alien, (self.x, self.y))
+
+    def hit(self, missile):
+        return pygame.Rect(self.x, self.y, 40, 30).colliderect(missile.x, missile.y, 10, 20)
 
     
 
@@ -56,8 +79,7 @@ class Missile:
     def move (self):
         self.y -= 10
 
-    def hit(self):
-        return pygame.Rect(self.x, self.y, 10, 20).colliderect(Rect(aliens[i].x, aliens[i].y, 150, 150))
+ 
 
     
         
@@ -77,6 +99,21 @@ missileTime = time.time() - 0.5
 
 clock = pygame.time.Clock()
 
+lives = 10
+
+backY = 0
+
+score = 0
+
+
+
+sound = pygame.mixer.Sound("shoot.wav")
+
+startSound = pygame.mixer.Sound("pacman_beginning.wav")
+
+startSound.play()
+
+
 while 1:
 
     
@@ -85,9 +122,28 @@ while 1:
 
     screen.fill((80,80,80))
     
-    screen.blit (background, (0,0))
+    screen.blit (background, (0,backY))
+
+    screen.blit (background, (0,backY - 720))
+
+    backY += 1
+
+    if backY == 720:
+        backY = 0
 
     clock.tick(100)
+
+
+    screen.blit(font.render("Score: " + str(score), True, (255,255,255)), (5,5))
+
+    if lives > 5:
+        pygame.draw.rect(screen, (128, 249, 22), Rect(5, 30, lives * 20, 15), 0)
+
+    elif lives <= 5:
+        pygame.draw.rect(screen, (249, 25, 21), Rect(5, 30, lives * 20, 15), 0)
+        
+    
+    
 
     ship.draw()
 
@@ -119,9 +175,14 @@ while 1:
         ship.y = 670
 
 
+    
+
+
 
     if pressed_key[K_SPACE] and time.time() - missileTime > 0.5:
         missile.append(Missile(ship.x + 20, ship.y))
+
+        sound.play()
 
         missileTime = time.time()
 
@@ -131,12 +192,16 @@ while 1:
 
         missile[m].move()
 
-        if missile[m].hit:
-            del missile[m]
-            m -= 1
+        
+
+       
 
 
         m += 1
+
+
+
+    
         
         
 
@@ -152,23 +217,72 @@ while 1:
 
     i = 0
     while i < len(aliens):
+        if aliens[i].y > 700:
+            del aliens[i]
+            i -= 1
+
+        i += 1
+
+
+
+    
+        
+
+    i = 0
+    while i < len(aliens):
         aliens[i].draw()
         
-        aliens[i].y += 0.5
+        aliens[i].y += aliens[i].dy
+        aliens[i].dy += 0.05
 
         if aliens[i].x < ship.x:
             aliens[i].x += 1
         elif aliens[i].x > ship.x:
             aliens[i].x -= 1
 
-        if aliens[i].y > 700:
-            del aliens[i]
-            i-=1
+        
+            
+            
 
         
 
-            
+
+
+        j = 0
+        while j < len(missile):
+            if aliens[i].hit(missile[j]):
+                del aliens[i]
+                del missile[j]
+                i -= 1
+                j -= 1
+                score += 10
+                
+
+                
+                break
+            j += 1
+
+                
         i += 1
+
+    i = 0
+    while i < len(aliens):
+
+        if ship.hit(aliens[i]):
+            
+            if lives > 1:
+                del aliens[i]
+                i -= 1
+                lives -= 1
+
+            else:
+                sys.exit()
+        i += 1 
+            
+        
+
+            
+        
 
 
 
